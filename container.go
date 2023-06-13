@@ -7,7 +7,7 @@ import (
 	"strconv"
 	"strings"
 
-	ahoy_targets "gitlab.com/hidothealth/platform/ahoy/src/target"
+	zen_targets "github.com/zen-io/zen-core/target"
 
 	"github.com/docker/docker/api/types"
 	"github.com/docker/docker/api/types/container"
@@ -17,26 +17,26 @@ import (
 )
 
 type DockerContainerConfig struct {
-	ahoy_targets.BaseFields `mapstructure:",squash"`
-	ContainerName           string            `mapstructure:"container"`
-	Image                   string            `mapstructure:"image"`
-	EnvFiles                []string          `mapstructure:"env_files"`
-	Command                 string            `mapstructure:"command"`
-	Entrypoint              string            `mapstructure:"entrypoint"`
-	Daemon                  bool              `mapstructure:"daemon"`
-	Volumes                 map[string]string `mapstructure:"volumes"`
-	Ports                   map[string]string `mapstructure:"ports"`
+	zen_targets.BaseFields `mapstructure:",squash"`
+	ContainerName          string            `mapstructure:"container"`
+	Image                  string            `mapstructure:"image"`
+	EnvFiles               []string          `mapstructure:"env_files"`
+	Command                string            `mapstructure:"command"`
+	Entrypoint             string            `mapstructure:"entrypoint"`
+	Daemon                 bool              `mapstructure:"daemon"`
+	Volumes                map[string]string `mapstructure:"volumes"`
+	Ports                  map[string]string `mapstructure:"ports"`
 }
 
-func (dcc DockerContainerConfig) GetTargets(_ *ahoy_targets.TargetConfigContext) ([]*ahoy_targets.Target, error) {
-	opts := []ahoy_targets.TargetOption{
-		ahoy_targets.WithSrcs(map[string][]string{"_envs": dcc.EnvFiles}),
-		ahoy_targets.WithOuts(dcc.EnvFiles),
-		ahoy_targets.WithEnvVars(dcc.Env),
-		ahoy_targets.WithSecretEnvVars(dcc.SecretEnv),
-		ahoy_targets.WithLabels(dcc.Labels),
-		ahoy_targets.WithTargetScript("deploy", &ahoy_targets.TargetScript{
-			Pre: func(target *ahoy_targets.Target, runCtx *ahoy_targets.RuntimeContext) error {
+func (dcc DockerContainerConfig) GetTargets(_ *zen_targets.TargetConfigContext) ([]*zen_targets.Target, error) {
+	opts := []zen_targets.TargetOption{
+		zen_targets.WithSrcs(map[string][]string{"_envs": dcc.EnvFiles}),
+		zen_targets.WithOuts(dcc.EnvFiles),
+		zen_targets.WithEnvVars(dcc.Env),
+		zen_targets.WithSecretEnvVars(dcc.SecretEnv),
+		zen_targets.WithLabels(dcc.Labels),
+		zen_targets.WithTargetScript("deploy", &zen_targets.TargetScript{
+			Pre: func(target *zen_targets.Target, runCtx *zen_targets.RuntimeContext) error {
 				cmd := []string{
 					"docker",
 					"run",
@@ -66,11 +66,11 @@ func (dcc DockerContainerConfig) GetTargets(_ *ahoy_targets.TargetConfigContext)
 					cmd = append(cmd, dcc.Command)
 				}
 
-				target.Env["AHOY_DEBUG_CMD"] = strings.Join(cmd, " ")
+				target.Env["ZEN_DEBUG_CMD"] = strings.Join(cmd, " ")
 
 				return nil
 			},
-			Run: func(target *ahoy_targets.Target, runCtx *ahoy_targets.RuntimeContext) error {
+			Run: func(target *zen_targets.Target, runCtx *zen_targets.RuntimeContext) error {
 				ctx := context.Background()
 				cli, err := client.NewClientWithOpts(client.FromEnv)
 				if err != nil {
@@ -165,8 +165,8 @@ func (dcc DockerContainerConfig) GetTargets(_ *ahoy_targets.TargetConfigContext)
 		}),
 	}
 
-	return []*ahoy_targets.Target{
-		ahoy_targets.NewTarget(
+	return []*zen_targets.Target{
+		zen_targets.NewTarget(
 			dcc.Name,
 			opts...,
 		),
@@ -255,7 +255,7 @@ func GetPortBindings(ports map[string]string) (m nat.PortMap, err error) {
 	return
 }
 
-func GetContainerEnv(target *ahoy_targets.Target, runCtx *ahoy_targets.RuntimeContext) ([]string, error) {
+func GetContainerEnv(target *zen_targets.Target, runCtx *zen_targets.RuntimeContext) ([]string, error) {
 	env := target.GetEnvironmentVariablesList()
 
 	for _, f := range target.Srcs["_envs"] {

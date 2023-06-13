@@ -1,4 +1,4 @@
-module github.com/tiagoposse/ahoy-docker
+module github.com/zen-io/zen-target-docker
 
 go 1.20
 
@@ -8,7 +8,7 @@ require (
 	github.com/docker/docker v24.0.2+incompatible
 	github.com/docker/go-connections v0.4.0
 	github.com/google/go-containerregistry v0.15.2
-	gitlab.com/hidothealth/platform/ahoy v0.0.0-00010101000000-000000000000
+	github.com/zen-io/zen-core v0.0.0-20230629185926-24b38b41eeb8
 )
 
 require (
@@ -57,7 +57,7 @@ require (
 	github.com/sirupsen/logrus v1.9.2 // indirect
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/tiagoposse/go-sync-types v0.0.0-20230606060517-e7839c4bca50 // indirect
-	github.com/tiagoposse/go-tasklist-out v0.0.0-00010101000000-000000000000 // indirect
+	github.com/tiagoposse/go-tasklist-out v0.0.0-20230612172535-e54b6ceb9584 // indirect
 	golang.org/x/crypto v0.9.0 // indirect
 	golang.org/x/exp v0.0.0-20230522175609-2e198f4a06a1 // indirect
 	golang.org/x/mod v0.10.0 // indirect
@@ -66,7 +66,3 @@ require (
 	golang.org/x/term v0.8.0 // indirect
 	golang.org/x/tools v0.8.0 // indirect
 )
-
-replace gitlab.com/hidothealth/platform/ahoy => /Users/tiagoposse/hi/ahoy
-
-replace github.com/tiagoposse/go-tasklist-out => /Users/tiagoposse/personal/go-tasklist-out

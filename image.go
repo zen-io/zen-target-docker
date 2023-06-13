@@ -7,8 +7,8 @@ import (
 	"path/filepath"
 	"strings"
 
-	ahoy_targets "gitlab.com/hidothealth/platform/ahoy/src/target"
-	"gitlab.com/hidothealth/platform/ahoy/src/utils"
+	zen_targets "github.com/zen-io/zen-core/target"
+	"github.com/zen-io/zen-core/utils"
 
 	ecr "github.com/awslabs/amazon-ecr-credential-helper/ecr-login"
 	"github.com/chrismellard/docker-credential-acr-env/pkg/credhelper"
@@ -21,24 +21,24 @@ var (
 )
 
 type DockerImageConfig struct {
-	Srcs                      []string          `mapstructure:"srcs"`
-	BuildArgs                 map[string]string `mapstructure:"build_args"`
-	Dockerfile                *string           `mapstructure:"dockerfile"`
-	DockerIgnore              *string           `mapstructure:"dockerignore"`
-	Image                     string            `mapstructure:"image"`
-	Context                   *string           `mapstructure:"context"`
-	Registry                  *string           `mapstructure:"registry"`
-	Tags                      []string          `mapstructure:"tags"`
-	Platform                  *string           `mapstructure:"platform"`
-	DeployDeps                []string          `mapstructure:"deploy_deps"`
-	Daemon                    bool              `mapstructure:"daemon"`
-	Buildx                    *string           `mapstructure:"buildx_toolchain"`
-	Crane                     *string           `mapstructure:"crane_toolchain"`
-	ahoy_targets.BaseFields   `mapstructure:",squash"`
-	ahoy_targets.DeployFields `mapstructure:",squash"`
+	Srcs                     []string          `mapstructure:"srcs"`
+	BuildArgs                map[string]string `mapstructure:"build_args"`
+	Dockerfile               *string           `mapstructure:"dockerfile"`
+	DockerIgnore             *string           `mapstructure:"dockerignore"`
+	Image                    string            `mapstructure:"image"`
+	Context                  *string           `mapstructure:"context"`
+	Registry                 *string           `mapstructure:"registry"`
+	Tags                     []string          `mapstructure:"tags"`
+	Platform                 *string           `mapstructure:"platform"`
+	DeployDeps               []string          `mapstructure:"deploy_deps"`
+	Daemon                   bool              `mapstructure:"daemon"`
+	Buildx                   *string           `mapstructure:"buildx_toolchain"`
+	Crane                    *string           `mapstructure:"crane_toolchain"`
+	zen_targets.BaseFields   `mapstructure:",squash"`
+	zen_targets.DeployFields `mapstructure:",squash"`
 }
 
-func (dic DockerImageConfig) GetTargets(tcc *ahoy_targets.TargetConfigContext) ([]*ahoy_targets.Target, error) {
+func (dic DockerImageConfig) GetTargets(tcc *zen_targets.TargetConfigContext) ([]*zen_targets.Target, error) {
 	if dic.Dockerfile == nil {
 		dic.Dockerfile = utils.StringPtr("Dockerfile")
 	}
@@ -69,21 +69,21 @@ func (dic DockerImageConfig) GetTargets(tcc *ahoy_targets.TargetConfigContext) (
 		dic.Tags = []string{"latest"}
 	}
 
-	opts := []ahoy_targets.TargetOption{
-		ahoy_targets.WithSrcs(map[string][]string{"context": dic.Srcs, "dockerfile": {*dic.Dockerfile}}),
-		ahoy_targets.WithOuts([]string{"image.tar"}),
-		ahoy_targets.WithEnvVars(dic.Env),
-		ahoy_targets.WithSecretEnvVars(dic.SecretEnv),
-		ahoy_targets.WithLabels(dic.Labels),
-		ahoy_targets.WithTools(toolchains),
-		ahoy_targets.WithPassEnv(dic.PassEnv),
-		ahoy_targets.WithEnvironments(dic.Environments),
-		ahoy_targets.WithTargetScript("build", &ahoy_targets.TargetScript{
+	opts := []zen_targets.TargetOption{
+		zen_targets.WithSrcs(map[string][]string{"context": dic.Srcs, "dockerfile": {*dic.Dockerfile}}),
+		zen_targets.WithOuts([]string{"image.tar"}),
+		zen_targets.WithEnvVars(dic.Env),
+		zen_targets.WithSecretEnvVars(dic.SecretEnv),
+		zen_targets.WithLabels(dic.Labels),
+		zen_targets.WithTools(toolchains),
+		zen_targets.WithPassEnv(dic.PassEnv),
+		zen_targets.WithEnvironments(dic.Environments),
+		zen_targets.WithTargetScript("build", &zen_targets.TargetScript{
 			Deps: dic.Deps,
-			Pre: func(target *ahoy_targets.Target, runCtx *ahoy_targets.RuntimeContext) error {
+			Pre: func(target *zen_targets.Target, runCtx *zen_targets.RuntimeContext) error {
 				return nil
 			},
-			Run: func(target *ahoy_targets.Target, runCtx *ahoy_targets.RuntimeContext) error {
+			Run: func(target *zen_targets.Target, runCtx *zen_targets.RuntimeContext) error {
 				target.SetStatus("Building image %s:%s", dic.Image, dic.Tags[0])
 
 				var context string
@@ -121,10 +121,10 @@ func (dic DockerImageConfig) GetTargets(tcc *ahoy_targets.TargetConfigContext) (
 				return nil
 			},
 		}),
-		ahoy_targets.WithTargetScript("deploy", &ahoy_targets.TargetScript{
+		zen_targets.WithTargetScript("deploy", &zen_targets.TargetScript{
 			Alias: []string{"push"},
 			Deps:  dic.DeployDeps,
-			Run: func(target *ahoy_targets.Target, runCtx *ahoy_targets.RuntimeContext) error {
+			Run: func(target *zen_targets.Target, runCtx *zen_targets.RuntimeContext) error {
 				target.SetStatus("Pushing image %s:%s", dic.Image, dic.Tags[0])
 
 				if dic.Registry == nil {
@@ -165,9 +165,9 @@ func (dic DockerImageConfig) GetTargets(tcc *ahoy_targets.TargetConfigContext) (
 				return nil
 			},
 		}),
-		ahoy_targets.WithTargetScript("load", &ahoy_targets.TargetScript{
+		zen_targets.WithTargetScript("load", &zen_targets.TargetScript{
 			Alias: []string{"push"},
-			Run: func(target *ahoy_targets.Target, runCtx *ahoy_targets.RuntimeContext) error {
+			Run: func(target *zen_targets.Target, runCtx *zen_targets.RuntimeContext) error {
 				target.SetStatus("Loading image %s:%s to docker", dic.Image, dic.Tags[0])
 
 				tags := []string{}
@@ -190,8 +190,8 @@ func (dic DockerImageConfig) GetTargets(tcc *ahoy_targets.TargetConfigContext) (
 		}),
 	}
 
-	return []*ahoy_targets.Target{
-		ahoy_targets.NewTarget(
+	return []*zen_targets.Target{
+		zen_targets.NewTarget(
 			dic.Name,
 			opts...,
 		),
