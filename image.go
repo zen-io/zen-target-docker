@@ -3,9 +3,7 @@ package docker
 import (
 	"fmt"
 	"io"
-	"os/exec"
 	"path/filepath"
-	"strings"
 
 	zen_targets "github.com/zen-io/zen-core/target"
 	"github.com/zen-io/zen-core/utils"
@@ -80,9 +78,6 @@ func (dic DockerImageConfig) GetTargets(tcc *zen_targets.TargetConfigContext) ([
 		zen_targets.WithEnvironments(dic.Environments),
 		zen_targets.WithTargetScript("build", &zen_targets.TargetScript{
 			Deps: dic.Deps,
-			Pre: func(target *zen_targets.Target, runCtx *zen_targets.RuntimeContext) error {
-				return nil
-			},
 			Run: func(target *zen_targets.Target, runCtx *zen_targets.RuntimeContext) error {
 				target.SetStatus("Building image %s:%s", dic.Image, dic.Tags[0])
 
@@ -94,7 +89,7 @@ func (dic DockerImageConfig) GetTargets(tcc *zen_targets.TargetConfigContext) ([
 				}
 
 				args := []string{
-					"build", context,
+					target.Tools["buildx"], "build", context,
 					"--output", fmt.Sprintf("type=docker,dest=%s/image.tar", target.Cwd),
 					"--file", target.Srcs["dockerfile"][0],
 				}
@@ -107,18 +102,7 @@ func (dic DockerImageConfig) GetTargets(tcc *zen_targets.TargetConfigContext) ([
 					args = append(args, "--build-arg", fmt.Sprintf("%s=%s", k, v))
 				}
 
-				target.Debugln("%s %s", target.Tools["buildx"], strings.Join(args, " "))
-
-				buildxCmd := exec.Command(target.Tools["buildx"], args...)
-				buildxCmd.Dir = target.Cwd
-				buildxCmd.Env = target.GetEnvironmentVariablesList()
-				buildxCmd.Stdout = target
-				buildxCmd.Stderr = target
-				if err := buildxCmd.Run(); err != nil {
-					return fmt.Errorf("executing build: %w", err)
-				}
-
-				return nil
+				return target.Exec(args, "docker build")
 			},
 		}),
 		zen_targets.WithTargetScript("deploy", &zen_targets.TargetScript{
@@ -139,25 +123,16 @@ func (dic DockerImageConfig) GetTargets(tcc *zen_targets.TargetConfigContext) ([
 				for _, t := range dic.Tags {
 					tags = append(tags, fmt.Sprintf("%s/%s:%s", *dic.Registry, dic.Image, t))
 				}
+				kraneCmd := []string{target.Tools["crane"], "push", filepath.Join(target.Cwd, "image.tar"), tags[0]}
 
-				target.Debugln(strings.Join([]string{target.Tools["crane"], "push", filepath.Join(target.Cwd, "image.tar"), tags[0]}, " "))
-				kraneCmd := exec.Command(target.Tools["crane"], "push", filepath.Join(target.Cwd, "image.tar"), tags[0])
-				kraneCmd.Dir = target.Cwd
-				kraneCmd.Env = target.GetEnvironmentVariablesList()
-				kraneCmd.Stdout = target
-				kraneCmd.Stderr = target
-				if err := kraneCmd.Run(); err != nil {
-					return fmt.Errorf("executing push: %w", err)
+				if err := target.Exec(kraneCmd, "pushing image"); err != nil {
+					return err
 				}
 
 				for _, t := range tags[1:] {
-					tagCmd := exec.Command(target.Tools["crane"], "tag", tags[0], t)
-					tagCmd.Dir = target.Cwd
-					tagCmd.Env = target.GetEnvironmentVariablesList()
-					tagCmd.Stdout = target
-					tagCmd.Stderr = target
-					if err := tagCmd.Run(); err != nil {
-						return fmt.Errorf("tagging image: %w", err)
+					tagCmd := []string{target.Tools["crane"], "tag", tags[0], t}
+					if err := target.Exec(tagCmd, "tagging image"); err != nil {
+						return err
 					}
 				}
 
@@ -175,13 +150,9 @@ func (dic DockerImageConfig) GetTargets(tcc *zen_targets.TargetConfigContext) ([
 					tags = append(tags, fmt.Sprintf("%s/%s:%s", *dic.Registry, dic.Image, t))
 				}
 
-				loadCmd := exec.Command(target.Tools["buildx"], "load", filepath.Join(target.Cwd, "image.tar"), tags[0])
-				loadCmd.Dir = target.Cwd
-				loadCmd.Env = target.GetEnvironmentVariablesList()
-				loadCmd.Stdout = target
-				loadCmd.Stderr = target
-				if err := loadCmd.Run(); err != nil {
-					return fmt.Errorf("executing push: %w", err)
+				loadCmd := []string{target.Tools["buildx"], "load", filepath.Join(target.Cwd, "image.tar"), tags[0]}
+				if err := target.Exec(loadCmd, "loading image"); err != nil {
+					return err
 				}
 
 				target.SetStatus("Loaded %s:%s", dic.Image, dic.Tags[0])
